@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Table, Input, Button, Space, App as AntdApp } from "antd";
+import { Table, Input, Button, Space, Skeleton, App as AntdApp } from "antd";
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import type { TableProps, TableColumnsType } from "antd";
 import type { PageParams, Paginated } from "../api/s1";
 import { useT } from "../i18n";
+import EmptyState from "./EmptyState";
 
 interface Props<T> {
   title: string;
@@ -18,6 +19,8 @@ interface Props<T> {
    * 设置后搜索框的输入不再传给后端，而是本地 filter。
    */
   searchFilter?: (row: T, query: string) => boolean;
+  /** Double-click handler — opens a detail drawer etc. */
+  onRowDoubleClick?: (row: T) => void;
 }
 
 export default function ResourceTable<T extends { id: string }>({
@@ -29,11 +32,13 @@ export default function ResourceTable<T extends { id: string }>({
   onSelectionChange,
   searchPlaceholder,
   searchFilter,
+  onRowDoubleClick,
 }: Props<T>) {
   const { message } = AntdApp.useApp();
   const t = useT();
   const [rows, setRows] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(true);
   const [query, setQuery] = useState("");
   const [pageSize, setPageSize] = useState(50);
   const [cursor, setCursor] = useState<string | undefined>();
@@ -56,6 +61,7 @@ export default function ResourceTable<T extends { id: string }>({
         message.error(`${title}: ${(e as Error).message}`);
       } finally {
         setLoading(false);
+        setFirstLoad(false);
       }
     },
     [cursor, fetcher, message, pageSize, query, title, searchFilter],
@@ -85,7 +91,7 @@ export default function ResourceTable<T extends { id: string }>({
     : undefined;
 
   return (
-    <div>
+    <div className="page-transition">
       <Space style={{ marginBottom: 12 }} wrap>
         <Input
           prefix={<SearchOutlined />}
@@ -96,7 +102,7 @@ export default function ResourceTable<T extends { id: string }>({
           onChange={(e) => setQuery(e.target.value)}
           onPressEnter={
             searchFilter
-              ? undefined // 客户端过滤无需触发 load
+              ? undefined
               : () => {
                   setCursor(undefined);
                   void load(true);
@@ -115,30 +121,50 @@ export default function ResourceTable<T extends { id: string }>({
         {extraToolbar}
       </Space>
 
-      <Table<T>
-        size="middle"
-        rowKey={rowKey as never}
-        loading={loading}
-        columns={columns}
-        dataSource={filteredRows}
-        rowSelection={rowSelection}
-        pagination={{
-          pageSize,
-          showSizeChanger: true,
-          pageSizeOptions: [20, 50, 100, 200],
-          onShowSizeChange: (_, s) => setPageSize(s),
-          showTotal: () => {
-            const suffix = nextCursor ? t("common.moreSuffix") : "";
-            if (searchFilter && query.trim() && filteredRows.length !== rows.length) {
-              return (
-                t("common.matchedCount", { m: filteredRows.length, n: rows.length }) + suffix
-              );
-            }
-            return t("common.totalCount", { n: rows.length }) + suffix;
-          },
-        }}
-        scroll={{ x: "max-content", y: "calc(100vh - 320px)" }}
-      />
+      {firstLoad && loading ? (
+        <div
+          style={{
+            background: "var(--bg-card)",
+            borderRadius: 12,
+            padding: 20,
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      ) : (
+        <Table<T>
+          className={`enhanced-table${onRowDoubleClick ? " has-row-click" : ""}`}
+          size="middle"
+          rowKey={rowKey as never}
+          loading={loading}
+          columns={columns}
+          dataSource={filteredRows}
+          rowSelection={rowSelection}
+          locale={{
+            emptyText: loading ? <span /> : <EmptyState />,
+          }}
+          onRow={(record) => ({
+            onDoubleClick: () => onRowDoubleClick?.(record),
+          })}
+          pagination={{
+            pageSize,
+            showSizeChanger: true,
+            pageSizeOptions: [20, 50, 100, 200],
+            onShowSizeChange: (_, s) => setPageSize(s),
+            showTotal: () => {
+              const suffix = nextCursor ? t("common.moreSuffix") : "";
+              if (searchFilter && query.trim() && filteredRows.length !== rows.length) {
+                return (
+                  t("common.matchedCount", { m: filteredRows.length, n: rows.length }) + suffix
+                );
+              }
+              return t("common.totalCount", { n: rows.length }) + suffix;
+            },
+          }}
+          scroll={{ x: "max-content", y: "calc(100vh - 320px)" }}
+        />
+      )}
 
       {nextCursor ? (
         <Button

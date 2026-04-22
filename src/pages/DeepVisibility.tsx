@@ -8,7 +8,6 @@ import {
   Space,
   Progress,
   Table,
-  Tag,
   App as AntdApp,
 } from "antd";
 import { DownloadOutlined, SearchOutlined } from "@ant-design/icons";
@@ -17,6 +16,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { s1, DVEvent } from "../api/s1";
 import { formatLocalTime } from "../utils/time";
 import ColumnPicker, { ColumnOption } from "../components/ColumnPicker";
+import StatusBadge, { type StatusTone } from "../components/StatusBadge";
 import { useT } from "../i18n";
 
 const { RangePicker } = DatePicker;
@@ -77,6 +77,31 @@ function targetSummary(e: DVEvent): string {
   if (e.tgt_proc_name) return e.tgt_proc_name;
   if (e.src_proc_image_path) return e.src_proc_image_path;
   return "";
+}
+
+function eventTone(raw?: string): StatusTone {
+  switch ((raw || "").toLowerCase()) {
+    case "process":
+      return "brand";
+    case "file":
+      return "info";
+    case "network":
+    case "ip":
+      return "success";
+    case "registry":
+      return "warning";
+    case "dns":
+      return "info";
+    case "login":
+      return "danger";
+    case "schedule":
+    case "scheduled_task":
+      return "warning";
+    case "url":
+      return "info";
+    default:
+      return "neutral";
+  }
 }
 
 function formatBytes(raw?: string): string {
@@ -161,7 +186,11 @@ export default function DeepVisibility() {
           title: t("dv.col.event_type"),
           dataIndex: "event_type",
           width: 120,
-          render: (v: string) => <Tag>{displayEventType(v)}</Tag>,
+          render: (v: string) => (
+            <StatusBadge tone={eventTone(v)} dot={false}>
+              {displayEventType(v)}
+            </StatusBadge>
+          ),
         },
       },
       {

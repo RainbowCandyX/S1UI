@@ -29,6 +29,20 @@ pub struct UserInfo {
 }
 
 #[derive(Debug, Serialize, Default)]
+pub struct NetworkInterface {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub inet: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub inet6: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub physical: Option<String>,
+}
+
+#[derive(Debug, Serialize, Default)]
 pub struct Agent {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,6 +58,8 @@ pub struct Agent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub os_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub os_revision: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
@@ -54,13 +70,35 @@ pub struct Agent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_active_date: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub registered_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_ip_to_connect: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub machine_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub domain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_memory: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub core_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_threats: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installer_type: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub network_interfaces: Vec<NetworkInterface>,
 }
 
 #[derive(Debug, Serialize, Default)]

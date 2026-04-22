@@ -38,7 +38,9 @@ export default function Login() {
     try {
       const meta = await s1.login(v);
       setConnected(v.hostname, meta);
-      message.success(`${t("login.connected")}: ${meta.email ?? v.hostname}`);
+      message.success(
+        meta.email ? `${t("login.connected")}: ${meta.email}` : t("login.connected"),
+      );
       nav("/dashboard");
     } catch (e) {
       message.error(`${t("login.failed")}: ${(e as Error).message}`);
@@ -60,46 +62,54 @@ export default function Login() {
   return (
     <div className="login-shell">
       <div className="login-card">
-        <h1>{t("login.title")}</h1>
-        <div className="sub">
-          {hasSaved ? t("login.subtitleSaved") : t("login.subtitleNormal")}
+        <div className="brand-bar" />
+        <div className="brand-head">
+          <div className="brand-logo">S1</div>
+          <div>
+            <div className="brand-title">{t("login.title")}</div>
+            <div className="brand-sub">
+              {hasSaved ? t("login.subtitleSaved") : t("login.subtitleNormal")}
+            </div>
+          </div>
         </div>
-        <Form<FormValues>
-          form={form}
-          layout="vertical"
-          initialValues={{
-            hostname: "https://usea1-partners.sentinelone.net",
-          }}
-          onFinish={onFinish}
-          autoComplete="off"
-        >
-          <Form.Item
-            label={t("login.hostname")}
-            name="hostname"
-            rules={[{ required: true, message: t("login.hostnameRequired") }]}
+        <div className="form-body">
+          <Form<FormValues>
+            form={form}
+            layout="vertical"
+            initialValues={{
+              hostname: "https://usea1-partners.sentinelone.net",
+            }}
+            onFinish={onFinish}
+            autoComplete="off"
           >
-            <Input placeholder="https://xxx.sentinelone.net" />
-          </Form.Item>
+            <Form.Item
+              label={t("login.hostname")}
+              name="hostname"
+              rules={[{ required: true, message: t("login.hostnameRequired") }]}
+            >
+              <Input placeholder="https://xxx.sentinelone.net" />
+            </Form.Item>
 
-          <Form.Item
-            label={t("login.token")}
-            name="apiToken"
-            rules={[{ required: true, message: t("login.tokenRequired") }]}
-          >
-            <Input.Password placeholder={t("login.tokenPlaceholder")} />
-          </Form.Item>
+            <Form.Item
+              label={t("login.token")}
+              name="apiToken"
+              rules={[{ required: true, message: t("login.tokenRequired") }]}
+            >
+              <Input.Password placeholder={t("login.tokenPlaceholder")} />
+            </Form.Item>
 
-          <Space style={{ width: "100%" }} direction="vertical">
-            <Button type="primary" htmlType="submit" loading={loading} block>
-              {t("login.submit")}
-            </Button>
-            {hasSaved && (
-              <Button block onClick={onClear} type="text" danger>
-                {t("login.clear")}
+            <Space style={{ width: "100%" }} direction="vertical">
+              <Button type="primary" htmlType="submit" loading={loading} block>
+                {t("login.submit")}
               </Button>
-            )}
-          </Space>
-        </Form>
+              {hasSaved && (
+                <Button block onClick={onClear} type="text" danger>
+                  {t("login.clear")}
+                </Button>
+              )}
+            </Space>
+          </Form>
+        </div>
       </div>
     </div>
   );

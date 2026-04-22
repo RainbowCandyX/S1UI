@@ -11,6 +11,7 @@ import {
   App as AntdApp,
 } from "antd";
 import { useSettings, useT, Lang } from "../i18n";
+import { ThemeMode } from "../store/settings";
 import { s1, ProxySettings } from "../api/s1";
 
 export default function Settings() {
@@ -18,6 +19,8 @@ export default function Settings() {
   const { message } = AntdApp.useApp();
   const lang = useSettings((s) => s.lang);
   const setLang = useSettings((s) => s.setLang);
+  const themeMode = useSettings((s) => s.themeMode);
+  const setThemeMode = useSettings((s) => s.setThemeMode);
 
   const [proxy, setProxy] = useState<ProxySettings>({
     enabled: false,
@@ -60,23 +63,46 @@ export default function Settings() {
   }
 
   return (
-    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+    <Space
+      direction="vertical"
+      size="middle"
+      style={{ width: "100%" }}
+      className="page-transition"
+    >
       <Card size="small" title={t("settings.title")} style={{ width: "100%" }}>
-        <div>
-          <Typography.Text strong>{t("settings.language")}</Typography.Text>
-          <div style={{ color: "#8c8c8c", fontSize: 12, margin: "4px 0 12px" }}>
-            {t("settings.languageHint")}
+        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <div>
+            <Typography.Text strong>{t("settings.language")}</Typography.Text>
+            <div style={{ color: "var(--text-muted)", fontSize: 12, margin: "4px 0 12px" }}>
+              {t("settings.languageHint")}
+            </div>
+            <Segmented
+              block
+              value={lang}
+              onChange={(v) => setLang(v as Lang)}
+              options={[
+                { label: t("common.chinese"), value: "zh" },
+                { label: t("common.english"), value: "en" },
+              ]}
+            />
           </div>
-          <Segmented
-            block
-            value={lang}
-            onChange={(v) => setLang(v as Lang)}
-            options={[
-              { label: t("common.chinese"), value: "zh" },
-              { label: t("common.english"), value: "en" },
-            ]}
-          />
-        </div>
+          <div>
+            <Typography.Text strong>{t("settings.theme")}</Typography.Text>
+            <div style={{ color: "var(--text-muted)", fontSize: 12, margin: "4px 0 12px" }}>
+              {t("settings.themeHint")}
+            </div>
+            <Segmented
+              block
+              value={themeMode}
+              onChange={(v) => setThemeMode(v as ThemeMode)}
+              options={[
+                { label: t("settings.themeLight"), value: "light" },
+                { label: t("settings.themeDark"), value: "dark" },
+                { label: t("settings.themeAuto"), value: "auto" },
+              ]}
+            />
+          </div>
+        </Space>
       </Card>
 
       <Card size="small" title={t("settings.proxy")} style={{ width: "100%" }}>

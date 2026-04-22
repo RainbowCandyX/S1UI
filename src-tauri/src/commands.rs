@@ -3,8 +3,8 @@ use crate::config;
 use crate::error::{S1Error, S1Result};
 use crate::models::{
     json_bool, json_flex_str, json_i64, json_str, json_u64, ActionResult, Agent, DVEvent,
-    DVQueryInit, DVQueryStatus, DashboardCounts, Exclusion, Group, Paginated, Pagination, Site,
-    Threat, UserInfo,
+    DVQueryInit, DVQueryStatus, DashboardCounts, Exclusion, Group, NetworkInterface, Paginated,
+    Pagination, Site, Threat, UserInfo,
 };
 use serde_json::{json, Value};
 use std::sync::Mutex;
@@ -222,7 +222,40 @@ fn pagination_from(resp: &Value) -> Pagination {
 
 // ========== Agents ==========
 
+fn json_str_array(v: &Value, key: &str) -> Vec<String> {
+    v.get(key)
+        .and_then(|x| x.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|e| e.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn network_interface_from(v: &Value) -> NetworkInterface {
+    NetworkInterface {
+        id: json_str(v, "id"),
+        name: json_str(v, "name"),
+        inet: json_str_array(v, "inet"),
+        inet6: json_str_array(v, "inet6"),
+        physical: json_str(v, "physical"),
+    }
+}
+
 fn agent_from(v: &Value) -> Agent {
+    let interfaces = v
+        .get("networkInterfaces")
+        .and_then(|x| x.as_array())
+        .map(|arr| arr.iter().map(network_interface_from).collect())
+        .unwrap_or_default();
+
+    // totalMemory may come as number or string (API docs say Double, but some payloads use int);
+    // we normalize to u64. Android divides by 1024 to get GB.
+    let total_memory = v
+        .get("totalMemory")
+        .and_then(|x| x.as_u64().or_else(|| x.as_f64().map(|f| f as u64)));
+
     Agent {
         id: json_str(v, "id").unwrap_or_default(),
         computer_name: json_str(v, "computerName"),
@@ -231,15 +264,27 @@ fn agent_from(v: &Value) -> Agent {
         group_name: json_str(v, "groupName"),
         os_name: json_str(v, "osName"),
         os_type: json_str(v, "osType"),
+        os_revision: json_str(v, "osRevision"),
         agent_version: json_str(v, "agentVersion"),
         is_active: json_bool(v, "isActive"),
         is_up_to_date: json_bool(v, "isUpToDate"),
         infected: json_bool(v, "infected"),
         last_active_date: json_str(v, "lastActiveDate"),
+        registered_at: json_str(v, "registeredAt"),
+        updated_at: json_str(v, "updatedAt"),
         external_ip: json_str(v, "externalIp"),
+        last_ip_to_connect: json_str(v, "lastIpToConnect"),
         network_status: json_str(v, "networkStatus"),
         machine_type: json_str(v, "machineType"),
         domain: json_str(v, "domain"),
+        uuid: json_str(v, "uuid"),
+        total_memory,
+        cpu_count: json_u64(v, "cpuCount"),
+        core_count: json_u64(v, "coreCount"),
+        cpu_id: json_str(v, "cpuId"),
+        active_threats: json_u64(v, "activeThreats"),
+        installer_type: json_str(v, "installerType"),
+        network_interfaces: interfaces,
     }
 }
 

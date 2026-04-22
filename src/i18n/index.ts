@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { useCallback } from "react";
+import { useSettings, type Lang } from "../store/settings";
 
-export type Lang = "zh" | "en";
+export { useSettings, type Lang };
 
 const dict: Record<Lang, Record<string, string>> = {
   zh: {
@@ -47,6 +47,45 @@ const dict: Record<Lang, Record<string, string>> = {
     "settings.proxyTestOk": "连接成功",
     "settings.proxyTestFail": "连接失败",
     "settings.proxyLoadFailed": "读取代理设置失败",
+    "settings.theme": "主题",
+    "settings.themeHint": "浅色更清晰，暗色对长时间监控更友好",
+    "settings.themeLight": "浅色",
+    "settings.themeDark": "暗色",
+    "settings.themeAuto": "跟随系统",
+
+    // Status Badge (semantic states shared across tables)
+    "status.online": "在线",
+    "status.offline": "离线",
+    "status.infected": "感染",
+    "status.mitigated": "已缓解",
+    "status.notMitigated": "未缓解",
+    "status.active": "启用",
+    "status.inactive": "未启用",
+    "status.uptodate": "最新",
+    "status.outofdate": "待升级",
+    "status.malicious": "恶意",
+    "status.suspicious": "可疑",
+    "status.truePositive": "确认威胁",
+    "status.falsePositive": "误报",
+    "status.undefinedVerdict": "待定",
+    "status.unresolved": "未解决",
+    "status.inProgress": "处理中",
+    "status.resolved": "已解决",
+
+    // Dashboard extras
+    "dash.timelineTitle": "近 24 小时威胁活动",
+    "dash.timelineSubtitle": "按小时聚合（模拟视图）",
+    "dash.trendUp": "对比昨日",
+    "dash.trendDown": "对比昨日",
+    "dash.viewDetails": "查看详情",
+
+    // Resource table empty / actions
+    "common.emptyTitle": "暂无数据",
+    "common.emptyHint": "调整搜索条件或稍后再试",
+    "common.rowDetails": "详情",
+    "common.close": "关闭",
+    "common.copy": "复制",
+    "common.copied": "已复制",
 
     // Common
     "common.account": "账户",
@@ -106,6 +145,24 @@ const dict: Record<Lang, Record<string, string>> = {
     "agents.col.domain": "域",
     "agents.col.network_status": "网络状态",
     "agents.col.last_active_date": "最后活跃",
+    "agents.col.registered_at": "注册时间",
+    "agents.col.internal_ip": "内网 IP",
+    "agents.col.mac_address": "MAC",
+    "agents.col.cpu_summary": "CPU",
+    "agents.col.cpu_id": "CPU 型号",
+    "agents.col.cpu_count": "CPU 数量",
+    "agents.col.core_count": "核心数",
+    "agents.col.total_memory": "内存",
+    "agents.col.uuid": "UUID",
+    "agents.col.active_threats": "活跃威胁",
+    "agents.section.basic": "基本信息",
+    "agents.section.hardware": "硬件",
+    "agents.section.network": "网络",
+    "agents.section.nicIndexed": "网卡 {n}",
+    "agents.nic.name": "名称",
+    "agents.nic.ipv4": "IPv4",
+    "agents.nic.ipv6": "IPv6",
+    "agents.nic.mac": "MAC",
     // actions
     "agents.action.disconnect": "断网隔离",
     "agents.action.connect": "恢复网络",
@@ -325,6 +382,42 @@ const dict: Record<Lang, Record<string, string>> = {
     "settings.proxyTestOk": "Connection OK",
     "settings.proxyTestFail": "Connection failed",
     "settings.proxyLoadFailed": "Failed to load proxy settings",
+    "settings.theme": "Theme",
+    "settings.themeHint": "Light for clarity, Dark for long monitoring sessions",
+    "settings.themeLight": "Light",
+    "settings.themeDark": "Dark",
+    "settings.themeAuto": "System",
+
+    "status.online": "Online",
+    "status.offline": "Offline",
+    "status.infected": "Infected",
+    "status.mitigated": "Mitigated",
+    "status.notMitigated": "Not Mitigated",
+    "status.active": "Active",
+    "status.inactive": "Inactive",
+    "status.uptodate": "Up to date",
+    "status.outofdate": "Out of date",
+    "status.malicious": "Malicious",
+    "status.suspicious": "Suspicious",
+    "status.truePositive": "True Positive",
+    "status.falsePositive": "False Positive",
+    "status.undefinedVerdict": "Undefined",
+    "status.unresolved": "Unresolved",
+    "status.inProgress": "In Progress",
+    "status.resolved": "Resolved",
+
+    "dash.timelineTitle": "Threat Activity · Last 24h",
+    "dash.timelineSubtitle": "Hourly aggregation (mock view)",
+    "dash.trendUp": "vs yesterday",
+    "dash.trendDown": "vs yesterday",
+    "dash.viewDetails": "Details",
+
+    "common.emptyTitle": "No data",
+    "common.emptyHint": "Adjust filters or try again later",
+    "common.rowDetails": "Details",
+    "common.close": "Close",
+    "common.copy": "Copy",
+    "common.copied": "Copied",
 
     "common.account": "Account",
     "common.logout": "Log out",
@@ -380,6 +473,24 @@ const dict: Record<Lang, Record<string, string>> = {
     "agents.col.domain": "Domain",
     "agents.col.network_status": "Network Status",
     "agents.col.last_active_date": "Last Active",
+    "agents.col.registered_at": "Registered At",
+    "agents.col.internal_ip": "Internal IP",
+    "agents.col.mac_address": "MAC",
+    "agents.col.cpu_summary": "CPU",
+    "agents.col.cpu_id": "CPU Model",
+    "agents.col.cpu_count": "CPU Count",
+    "agents.col.core_count": "Cores",
+    "agents.col.total_memory": "Memory",
+    "agents.col.uuid": "UUID",
+    "agents.col.active_threats": "Active Threats",
+    "agents.section.basic": "Basic Info",
+    "agents.section.hardware": "Hardware",
+    "agents.section.network": "Network",
+    "agents.section.nicIndexed": "NIC {n}",
+    "agents.nic.name": "Name",
+    "agents.nic.ipv4": "IPv4",
+    "agents.nic.ipv6": "IPv6",
+    "agents.nic.mac": "MAC",
     "agents.action.disconnect": "Disconnect",
     "agents.action.connect": "Reconnect",
     "agents.action.shutdown": "Shutdown",
@@ -547,28 +658,22 @@ const dict: Record<Lang, Record<string, string>> = {
   },
 };
 
-interface SettingsState {
-  lang: Lang;
-  setLang: (l: Lang) => void;
-}
-
-export const useSettings = create<SettingsState>()(
-  persist(
-    (set) => ({
-      lang: "zh",
-      setLang: (lang) => set({ lang }),
-    }),
-    { name: "s1ui-settings" },
-  ),
-);
-
 function format(s: string, vars?: Record<string, string | number>): string {
   if (!vars) return s;
   return s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`));
 }
 
-/** Reactive translator hook. Supports `{name}` placeholders. */
+/**
+ * Reactive translator hook. Supports `{name}` placeholders.
+ * Returns a reference stable for the given `lang` — only changes when the user
+ * switches language. This is critical: any `useEffect([..., t])` or
+ * `useMemo([..., t])` would otherwise re-run on every render and can cause
+ * infinite fetch loops (seen as 429 storms).
+ */
 export function useT(): (key: string, vars?: Record<string, string | number>) => string {
   const lang = useSettings((s) => s.lang);
-  return (key, vars) => format(dict[lang][key] ?? key, vars);
+  return useCallback(
+    (key, vars) => format(dict[lang][key] ?? key, vars),
+    [lang],
+  );
 }

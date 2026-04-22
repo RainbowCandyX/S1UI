@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Tag, Space } from "antd";
+import { Space } from "antd";
 import type { TableColumnsType } from "antd";
 import ResourceTable from "../components/ResourceTable";
 import ColumnPicker, { ColumnOption } from "../components/ColumnPicker";
+import StatusBadge from "../components/StatusBadge";
 import { s1, Site } from "../api/s1";
 import { formatLocalTime } from "../utils/time";
 import { useT } from "../i18n";
@@ -39,7 +40,9 @@ export default function Sites() {
           title: t("sites.col.state"),
           dataIndex: "state",
           width: 100,
-          render: (v: string) => <Tag color={v === "active" ? "green" : "default"}>{v}</Tag>,
+          render: (v: string) => (
+            <StatusBadge tone={v === "active" ? "success" : "neutral"}>{v}</StatusBadge>
+          ),
         },
       },
       {

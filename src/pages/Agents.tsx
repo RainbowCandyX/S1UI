@@ -1,12 +1,112 @@
 import { useMemo, useState } from "react";
-import { Tag, Button, Dropdown, Space, Switch, App as AntdApp } from "antd";
+import { Button, Dropdown, Space, Switch, App as AntdApp } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import type { TableColumnsType } from "antd";
 import ResourceTable from "../components/ResourceTable";
 import ColumnPicker, { ColumnOption } from "../components/ColumnPicker";
-import { s1, Agent } from "../api/s1";
+import StatusBadge from "../components/StatusBadge";
+import DetailDrawer, { DetailSection } from "../components/DetailDrawer";
+import { s1, Agent, NetworkInterface } from "../api/s1";
 import { formatLocalTime } from "../utils/time";
 import { useT } from "../i18n";
+
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+function buildAgentSections(a: Agent, t: TFn): DetailSection[] {
+  const osLine = [a.os_name, a.os_revision].filter(Boolean).join(" ") || undefined;
+
+  const basic: DetailSection = {
+    title: t("agents.section.basic"),
+    rows: [
+      { key: "os", label: t("agents.col.os_name"), value: osLine },
+      { key: "ver", label: t("agents.col.agent_version"), value: a.agent_version },
+      {
+        key: "utd",
+        label: t("agents.col.is_up_to_date"),
+        value:
+          a.is_up_to_date === undefined
+            ? undefined
+            : a.is_up_to_date
+              ? t("common.yes")
+              : t("common.no"),
+      },
+      { key: "domain", label: t("agents.col.domain"), value: a.domain },
+      { key: "site", label: t("agents.col.site_name"), value: a.site_name },
+      { key: "group", label: t("agents.col.group_name"), value: a.group_name },
+      { key: "uuid", label: t("agents.col.uuid"), value: a.uuid },
+      { key: "reg", label: t("agents.col.registered_at"), value: formatLocalTime(a.registered_at || "") },
+      { key: "last", label: t("agents.col.last_active_date"), value: formatLocalTime(a.last_active_date || "") },
+      { key: "threats", label: t("agents.col.active_threats"), value: a.active_threats },
+    ],
+  };
+
+  const hardware: DetailSection = {
+    title: t("agents.section.hardware"),
+    rows: [
+      { key: "type", label: t("agents.col.machine_type"), value: a.machine_type },
+      { key: "cpu_id", label: t("agents.col.cpu_id"), value: a.cpu_id },
+      { key: "cpu_count", label: t("agents.col.cpu_count"), value: a.cpu_count },
+      { key: "core_count", label: t("agents.col.core_count"), value: a.core_count },
+      { key: "mem", label: t("agents.col.total_memory"), value: formatMemoryMB(a.total_memory) },
+    ],
+  };
+
+  const networkBasic: DetailSection = {
+    title: t("agents.section.network"),
+    rows: [
+      { key: "net_status", label: t("agents.col.network_status"), value: a.network_status },
+      { key: "ext_ip", label: t("agents.col.external_ip"), value: a.external_ip },
+      { key: "int_ip", label: t("agents.col.internal_ip"), value: firstInternalIp(a) },
+    ],
+  };
+
+  const ifaceSections: DetailSection[] = (a.network_interfaces ?? []).map(
+    (iface: NetworkInterface, idx: number) => ({
+      title: t("agents.section.nicIndexed", { n: idx + 1 }),
+      rows: [
+        { key: "name", label: t("agents.nic.name"), value: iface.name },
+        {
+          key: "ipv4",
+          label: t("agents.nic.ipv4"),
+          value: iface.inet && iface.inet.length ? iface.inet.join(", ") : undefined,
+        },
+        {
+          key: "ipv6",
+          label: t("agents.nic.ipv6"),
+          value: iface.inet6 && iface.inet6.length ? iface.inet6.join(", ") : undefined,
+        },
+        { key: "mac", label: t("agents.nic.mac"), value: iface.physical },
+      ],
+    }),
+  );
+
+  return [basic, hardware, networkBasic, ...ifaceSections];
+}
+
+function formatMemoryMB(mb?: number): string {
+  if (!mb || mb <= 0) return "—";
+  const gb = mb / 1024;
+  if (gb >= 1) return `${gb.toFixed(gb >= 10 ? 0 : 1)} GB`;
+  return `${mb.toFixed(0)} MB`;
+}
+
+function cpuSummary(r: Agent): string {
+  const parts: string[] = [];
+  if (r.cpu_id) parts.push(r.cpu_id);
+  if (r.core_count) parts.push(`${r.core_count}C`);
+  if (r.cpu_count && r.cpu_count > 1) parts.push(`× ${r.cpu_count}`);
+  return parts.join(" ") || "—";
+}
+
+function firstInternalIp(r: Agent): string {
+  if (r.last_ip_to_connect) return r.last_ip_to_connect;
+  const first = r.network_interfaces?.[0];
+  return first?.inet?.[0] ?? "—";
+}
+
+function firstMac(r: Agent): string {
+  return r.network_interfaces?.find((i) => i.physical)?.physical ?? "—";
+}
 
 const ACTION_KEYS = [
   "disconnect",
@@ -42,8 +142,13 @@ const ALL_COLUMN_KEYS = [
   "site_name",
   "group_name",
   "external_ip",
+  "internal_ip",
+  "mac_address",
   "domain",
   "network_status",
+  "cpu_summary",
+  "total_memory",
+  "uuid",
   "last_active_date",
 ];
 
@@ -52,6 +157,11 @@ export default function Agents() {
   const t = useT();
   const [selected, setSelected] = useState<string[]>([]);
   const [visibleKeys, setVisibleKeys] = useState<string[]>(DEFAULT_VISIBLE);
+  const [detail, setDetail] = useState<Agent | null>(null);
+
+  const detailSections: DetailSection[] = detail
+    ? buildAgentSections(detail, t)
+    : [];
 
   const columnDefs = useMemo<
     { key: string; col: TableColumnsType<Agent>[number] }[]
@@ -73,11 +183,16 @@ export default function Agents() {
           dataIndex: "is_active",
           width: 80,
           render: (v: boolean, r: Agent) => {
-            if (r.infected) return <Tag color="red">{t("agents.tagInfected")}</Tag>;
+            if (r.infected)
+              return (
+                <StatusBadge tone="danger" pulse>
+                  {t("agents.tagInfected")}
+                </StatusBadge>
+              );
             return v ? (
-              <Tag color="green">{t("agents.tagOnline")}</Tag>
+              <StatusBadge tone="success">{t("agents.tagOnline")}</StatusBadge>
             ) : (
-              <Tag>{t("agents.tagOffline")}</Tag>
+              <StatusBadge tone="neutral">{t("agents.tagOffline")}</StatusBadge>
             );
           },
         },
@@ -99,19 +214,65 @@ export default function Agents() {
           width: 90,
           render: (v: boolean) =>
             v ? (
-              <Tag color="blue">{t("common.yes")}</Tag>
+              <StatusBadge tone="info">{t("status.uptodate")}</StatusBadge>
             ) : (
-              <Tag color="orange">{t("common.no")}</Tag>
+              <StatusBadge tone="warning">{t("status.outofdate")}</StatusBadge>
             ),
         },
       },
       { key: "site_name", col: { title: t("agents.col.site_name"), dataIndex: "site_name", width: 140 } },
       { key: "group_name", col: { title: t("agents.col.group_name"), dataIndex: "group_name", width: 140 } },
       { key: "external_ip", col: { title: t("agents.col.external_ip"), dataIndex: "external_ip", width: 140 } },
+      {
+        key: "internal_ip",
+        col: {
+          title: t("agents.col.internal_ip"),
+          key: "internal_ip",
+          width: 140,
+          render: (_: unknown, r: Agent) => firstInternalIp(r),
+        },
+      },
+      {
+        key: "mac_address",
+        col: {
+          title: t("agents.col.mac_address"),
+          key: "mac_address",
+          width: 150,
+          render: (_: unknown, r: Agent) => firstMac(r),
+        },
+      },
       { key: "domain", col: { title: t("agents.col.domain"), dataIndex: "domain", width: 120 } },
       {
         key: "network_status",
         col: { title: t("agents.col.network_status"), dataIndex: "network_status", width: 120 },
+      },
+      {
+        key: "cpu_summary",
+        col: {
+          title: t("agents.col.cpu_summary"),
+          key: "cpu_summary",
+          width: 220,
+          ellipsis: true,
+          render: (_: unknown, r: Agent) => cpuSummary(r),
+        },
+      },
+      {
+        key: "total_memory",
+        col: {
+          title: t("agents.col.total_memory"),
+          dataIndex: "total_memory",
+          width: 100,
+          render: (v?: number) => formatMemoryMB(v),
+        },
+      },
+      {
+        key: "uuid",
+        col: {
+          title: t("agents.col.uuid"),
+          dataIndex: "uuid",
+          width: 240,
+          ellipsis: true,
+        },
       },
       {
         key: "last_active_date",
@@ -213,12 +374,14 @@ export default function Agents() {
   }
 
   return (
-    <ResourceTable<Agent>
+    <>
+      <ResourceTable<Agent>
       title={t("agents.title")}
       columns={columns}
       rowKey="id"
       fetcher={s1.listAgents}
       onSelectionChange={(ids) => setSelected(ids)}
+      onRowDoubleClick={(r) => setDetail(r)}
       searchPlaceholder={t("agents.search")}
       searchFilter={(a, q) => {
         const low = q.toLowerCase();
@@ -261,6 +424,14 @@ export default function Agents() {
           />
         </Space>
       }
-    />
+      />
+      <DetailDrawer
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.computer_name ?? t("common.rowDetails")}
+        sections={detailSections}
+        raw={detail}
+      />
+    </>
   );
 }

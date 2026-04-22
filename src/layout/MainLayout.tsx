@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout, Menu, Avatar, Dropdown, Space } from "antd";
+import { Layout, Menu, Avatar, Dropdown, Space, Tooltip, Button } from "antd";
 import {
   DashboardOutlined,
   DesktopOutlined,
@@ -10,9 +10,12 @@ import {
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
+  BulbOutlined,
+  BulbFilled,
 } from "@ant-design/icons";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import { useSettings, useEffectiveTheme } from "../store/settings";
 import { s1 } from "../api/s1";
 import { useT } from "../i18n";
 
@@ -24,6 +27,9 @@ export default function MainLayout() {
   const { userMeta, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
   const t = useT();
+  const themeMode = useSettings((s) => s.themeMode);
+  const setThemeMode = useSettings((s) => s.setThemeMode);
+  const effective = useEffectiveTheme();
 
   const menu = [
     { key: "/dashboard", icon: <DashboardOutlined />, label: t("menu.dashboard") },
@@ -41,6 +47,19 @@ export default function MainLayout() {
     nav("/login");
   }
 
+  function toggleTheme() {
+    if (themeMode === "light") setThemeMode("dark");
+    else if (themeMode === "dark") setThemeMode("auto");
+    else setThemeMode("light");
+  }
+
+  const themeTip =
+    themeMode === "light"
+      ? t("settings.themeLight")
+      : themeMode === "dark"
+        ? t("settings.themeDark")
+        : t("settings.themeAuto");
+
   return (
     <Layout style={{ height: "100vh" }}>
       <Sider
@@ -49,20 +68,11 @@ export default function MainLayout() {
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
+        className="app-sider"
       >
-        <div
-          style={{
-            color: "#fff",
-            padding: "18px 16px",
-            fontWeight: 600,
-            fontSize: 16,
-            letterSpacing: 0.5,
-            textAlign: collapsed ? "center" : "left",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-          }}
-        >
-          {collapsed ? "S1" : "S1 Console"}
+        <div className="app-brand">
+          <div className="logo">{collapsed ? "S1" : "S1"}</div>
+          {!collapsed && <div className="title">S1 Console</div>}
         </div>
         <Menu
           theme="dark"
@@ -70,19 +80,28 @@ export default function MainLayout() {
           selectedKeys={[loc.pathname]}
           items={menu}
           onClick={({ key }) => nav(key)}
+          style={{ background: "transparent", borderInlineEnd: "none" }}
         />
       </Sider>
       <Layout>
         <Header
           style={{
-            background: "#fff",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: "1px solid var(--border-subtle)",
             padding: "0 20px",
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
+            gap: 8,
           }}
         >
+          <Tooltip title={themeTip} placement="bottom">
+            <Button
+              type="text"
+              icon={effective === "dark" ? <BulbFilled /> : <BulbOutlined />}
+              onClick={toggleTheme}
+              aria-label={t("settings.theme")}
+            />
+          </Tooltip>
           <Dropdown
             menu={{
               items: [
@@ -95,13 +114,19 @@ export default function MainLayout() {
               ],
             }}
           >
-            <Space style={{ cursor: "pointer" }}>
+            <Space style={{ cursor: "pointer", padding: "0 8px" }}>
               <Avatar size="small" icon={<UserOutlined />} />
               <span>{userMeta?.email ?? userMeta?.full_name ?? t("common.account")}</span>
             </Space>
           </Dropdown>
         </Header>
-        <Content style={{ padding: 20, overflow: "auto", background: "#f5f6fa" }}>
+        <Content
+          style={{
+            padding: 20,
+            overflow: "auto",
+            background: "var(--bg-app)",
+          }}
+        >
           <Outlet />
         </Content>
       </Layout>

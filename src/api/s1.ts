@@ -30,6 +30,14 @@ export interface Paginated<T> {
   };
 }
 
+export interface NetworkInterface {
+  id?: string;
+  name?: string;
+  inet?: string[];
+  inet6?: string[];
+  physical?: string;
+}
+
 export interface Agent {
   id: string;
   computer_name?: string;
@@ -38,15 +46,27 @@ export interface Agent {
   group_name?: string;
   os_name?: string;
   os_type?: string;
+  os_revision?: string;
   agent_version?: string;
   is_active?: boolean;
   is_up_to_date?: boolean;
   infected?: boolean;
   last_active_date?: string;
+  registered_at?: string;
+  updated_at?: string;
   external_ip?: string;
+  last_ip_to_connect?: string;
   network_status?: string;
   machine_type?: string;
   domain?: string;
+  uuid?: string;
+  total_memory?: number;
+  cpu_count?: number;
+  core_count?: number;
+  cpu_id?: string;
+  active_threats?: number;
+  installer_type?: string;
+  network_interfaces?: NetworkInterface[];
 }
 
 export interface Threat {

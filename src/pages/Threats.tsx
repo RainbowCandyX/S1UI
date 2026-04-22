@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { Tag, Button, Dropdown, Space, App as AntdApp } from "antd";
+import { Button, Dropdown, Space, App as AntdApp } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import type { TableColumnsType } from "antd";
 import ResourceTable from "../components/ResourceTable";
 import ColumnPicker, { ColumnOption } from "../components/ColumnPicker";
+import StatusBadge, { type StatusTone } from "../components/StatusBadge";
+import DetailDrawer, { DetailSection } from "../components/DetailDrawer";
 import { s1, Threat } from "../api/s1";
 import { formatLocalTime } from "../utils/time";
 import { useT } from "../i18n";
@@ -47,16 +49,29 @@ const DEFAULT_VISIBLE = [
   "created_at",
 ];
 
-function verdictColor(v?: string) {
+function verdictTone(v?: string): StatusTone {
   switch ((v || "").toLowerCase()) {
     case "true_positive":
-      return "red";
+      return "danger";
     case "false_positive":
-      return "default";
+      return "neutral";
     case "suspicious":
-      return "orange";
+      return "warning";
     default:
-      return "blue";
+      return "info";
+  }
+}
+
+function mitigationTone(v?: string): StatusTone {
+  switch ((v || "").toLowerCase()) {
+    case "mitigated":
+      return "success";
+    case "not_mitigated":
+      return "danger";
+    case "marked_as_benign":
+      return "neutral";
+    default:
+      return "warning";
   }
 }
 
@@ -65,6 +80,28 @@ export default function Threats() {
   const t = useT();
   const [selected, setSelected] = useState<string[]>([]);
   const [visibleKeys, setVisibleKeys] = useState<string[]>(DEFAULT_VISIBLE);
+  const [detail, setDetail] = useState<Threat | null>(null);
+
+  const detailSections: DetailSection[] = detail
+    ? [
+        {
+          title: t("menu.threats"),
+          rows: [
+            { key: "name", label: t("threats.col.threat_name"), value: detail.threat_name },
+            { key: "cls", label: t("threats.col.classification"), value: detail.classification },
+            { key: "conf", label: t("threats.col.confidence_level"), value: detail.confidence_level },
+            { key: "mit", label: t("threats.col.mitigation_status"), value: detail.mitigation_status },
+            { key: "inc", label: t("threats.col.incident_status"), value: detail.incident_status },
+            { key: "ver", label: t("threats.col.analyst_verdict"), value: detail.analyst_verdict },
+            { key: "host", label: t("threats.col.agent_computer_name"), value: detail.agent_computer_name },
+            { key: "os", label: t("threats.col.agent_os_type"), value: detail.agent_os_type },
+            { key: "path", label: t("threats.col.file_path"), value: detail.file_path },
+            { key: "sha1", label: t("threats.col.file_sha1"), value: detail.file_sha1 },
+            { key: "ts", label: t("threats.col.created_at"), value: formatLocalTime(detail.created_at || "") },
+          ],
+        },
+      ]
+    : [];
 
   const columnDefs = useMemo<
     { key: string; col: TableColumnsType<Threat>[number] }[]
@@ -86,7 +123,11 @@ export default function Threats() {
           title: t("threats.col.confidence_level"),
           dataIndex: "confidence_level",
           width: 110,
-          render: (v: string) => <Tag color={v === "malicious" ? "red" : "orange"}>{v}</Tag>,
+          render: (v: string) => (
+            <StatusBadge tone={v === "malicious" ? "danger" : "warning"} pulse={v === "malicious"}>
+              {v}
+            </StatusBadge>
+          ),
         },
       },
       {
@@ -99,11 +140,7 @@ export default function Threats() {
           title: t("threats.col.mitigation_status"),
           dataIndex: "mitigation_status",
           width: 120,
-          render: (v: string) => (
-            <Tag color={v === "mitigated" ? "green" : v === "not_mitigated" ? "red" : "default"}>
-              {v}
-            </Tag>
-          ),
+          render: (v: string) => <StatusBadge tone={mitigationTone(v)}>{v}</StatusBadge>,
         },
       },
       {
@@ -116,7 +153,9 @@ export default function Threats() {
           title: t("threats.col.analyst_verdict"),
           dataIndex: "analyst_verdict",
           width: 140,
-          render: (v: string) => <Tag color={verdictColor(v)}>{v || "undefined"}</Tag>,
+          render: (v: string) => (
+            <StatusBadge tone={verdictTone(v)}>{v || "undefined"}</StatusBadge>
+          ),
         },
       },
       {
@@ -247,12 +286,14 @@ export default function Threats() {
   const disabled = selected.length === 0;
 
   return (
-    <ResourceTable<Threat>
+    <>
+      <ResourceTable<Threat>
       title={t("threats.title")}
       columns={columns}
       rowKey="id"
       fetcher={s1.listThreats}
       onSelectionChange={(ids) => setSelected(ids)}
+      onRowDoubleClick={(r) => setDetail(r)}
       searchPlaceholder={t("threats.search")}
       searchFilter={(th, q) => {
         const low = q.toLowerCase();
@@ -306,6 +347,14 @@ export default function Threats() {
           />
         </Space>
       }
-    />
+      />
+      <DetailDrawer
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.threat_name ?? t("common.rowDetails")}
+        sections={detailSections}
+        raw={detail}
+      />
+    </>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Tag,
   Switch,
   Space,
   Segmented,
@@ -15,6 +14,7 @@ import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { TableColumnsType } from "antd";
 import ResourceTable from "../components/ResourceTable";
 import ColumnPicker, { ColumnOption } from "../components/ColumnPicker";
+import StatusBadge from "../components/StatusBadge";
 import { s1, Exclusion, PageParams, Paginated, Site, Group } from "../api/s1";
 import { isBuiltinExclusion } from "../api/filters";
 import { formatLocalTime } from "../utils/time";
@@ -98,7 +98,7 @@ export default function Exclusions() {
           title: t("excl.col.mode"),
           dataIndex: "mode",
           width: 140,
-          render: (v: string) => <Tag>{v}</Tag>,
+          render: (v: string) => <StatusBadge tone="neutral" dot={false}>{v}</StatusBadge>,
         },
       },
       { key: "scope", col: { title: t("excl.col.scope"), dataIndex: "scope", width: 120 } },
